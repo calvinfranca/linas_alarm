@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "634660058298",
+    "project_id": "lina-s-alarm",
+    "storage_bucket": "lina-s-alarm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:634660058298:android:985dbe2555728b6d2f7e83",
+        "android_client_info": {
+          "package_name": "com.carubi.linasalarm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxCdyMpF9W6e3jhJ5eB4tZvrgp6IUXEkM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:634660058298:android:d6ef684b7cc863872f7e83",
+        "android_client_info": {
+          "package_name": "com.example.linas_alarm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxCdyMpF9W6e3jhJ5eB4tZvrgp6IUXEkM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
