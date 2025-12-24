@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:linas_alarm/create_alarm_page.dart';
+import 'package:linas_alarm/group_songs_page.dart';
 import 'package:uuid/uuid.dart';
 
 import 'alarm_service.dart';
@@ -306,9 +307,26 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // -------------------------
-  // NOVO: Confirmar exclusão
-  // -------------------------
+  Future<void> _openGroupSongsEditor(MusicGroup group) async {
+    final updated = await Navigator.push<MusicGroup>(
+      context,
+      MaterialPageRoute(builder: (_) => GroupSongsPage(group: group)),
+    );
+
+    if (updated == null) return;
+
+    final idx = _groups.indexWhere((g) => g.id == updated.id);
+    if (idx == -1) return;
+
+    setState(() {
+      _groups[idx] = updated;
+      // Se estava mostrando lixeira, esconde
+      if (_groupIdShowingDelete == updated.id) _groupIdShowingDelete = null;
+    });
+
+    await _saveAll();
+  }
+
 
   Future<bool> _confirmDelete({
     required String title,
@@ -468,7 +486,7 @@ class _HomePageState extends State<HomePage> {
               return Card(
                 color: showTrash ? const Color.fromARGB(169, 255, 0, 38) : Color.fromARGB(74, 86, 204, 39),
                 child: InkWell(
-                  onTap: () => _addSongsToGroup(g),
+                  onTap: () => _openGroupSongsEditor(g),
                   onLongPress: () {
                     setState(() {
                       _alarmIdShowingDelete = null;
@@ -484,7 +502,7 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(8),
                         onTap: showTrash
                             ? () => _deleteGroup(g)
-                            : () => _addSongsToGroup(g),
+                            : () => _openGroupSongsEditor(g),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white24,

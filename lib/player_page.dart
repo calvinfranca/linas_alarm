@@ -76,7 +76,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _pickAndPlay,
-                    child: const Text("TROCAR (random)"),
+                    child: const Text("PLAY"),
                   ),
                 ),
               ],
