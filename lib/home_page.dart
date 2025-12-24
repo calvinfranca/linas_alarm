@@ -108,18 +108,18 @@ class _HomePageState extends State<HomePage> {
     setState(() => _alarms.add(result.alarm));
     await _saveAll();
 
-    await AlarmService.scheduleOneShot(
+    await AlarmService.schedule(
       alarm: result.alarm,
       paths: _groups.firstWhere((g) => g.id == result.alarm.groupId).paths,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Alarme salvo para ${result.alarm.hour.toString().padLeft(2, '0')}:${result.alarm.minute.toString().padLeft(2, '0')}",
-        ),
-      ),
+    final msg = buildNextAlarmMessage(
+      hour: result.alarm.hour,
+      minute: result.alarm.minute,
+      repeatDaysMask: result.alarm.repeatDaysMask,
     );
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _toggleAlarm(AlarmItem a, bool enabled) async {
@@ -132,6 +132,7 @@ class _HomePageState extends State<HomePage> {
       minute: a.minute,
       groupId: a.groupId,
       enabled: enabled,
+      repeatDaysMask: a.repeatDaysMask,
     );
 
     setState(() => _alarms[idx] = updated);
@@ -139,11 +140,53 @@ class _HomePageState extends State<HomePage> {
 
     if (enabled) {
       final group = _groups.firstWhere((g) => g.id == updated.groupId);
-      await AlarmService.scheduleOneShot(alarm: updated, paths: group.paths);
+      await AlarmService.schedule(alarm: updated, paths: group.paths);
+      
+      final msg = buildNextAlarmMessage(
+        hour: updated.hour,
+        minute: updated.minute,
+        repeatDaysMask: updated.repeatDaysMask,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
     } else {
       await AlarmService.cancel(updated.alarmId);
     }
   }
+
+  static String buildNextAlarmMessage({
+    required int hour,
+    required int minute,
+    required int repeatDaysMask,
+    DateTime? now,
+  }) {
+    final n = now ?? DateTime.now();
+
+    final nextTrigger = AlarmService.computeNextTrigger(
+      hour: hour,
+      minute: minute,
+      repeatDaysMask: repeatDaysMask,
+      now: n,
+    );
+
+    final diff = nextTrigger.difference(n);
+
+    final hours = diff.inHours;
+    final minutes = diff.inMinutes % 60;
+
+    if (hours <= 0 && minutes <= 0) {
+      return "O alarme vai tocar em instantes.";
+    } else if (hours <= 0) {
+      return "O alarme vai tocar daqui a $minutes minuto${minutes == 1 ? '' : 's'}.";
+    } else if (minutes == 0) {
+      return "O alarme vai tocar daqui a $hours hora${hours == 1 ? '' : 's'}.";
+    } else {
+      return "O alarme vai tocar daqui a $hours hora${hours == 1 ? '' : 's'} "
+          "e $minutes minuto${minutes == 1 ? '' : 's'}.";
+    }
+  }
+
 
   void _testPlay(AlarmItem alarm) {
     final group = _groups.firstWhere((g) => g.id == alarm.groupId);

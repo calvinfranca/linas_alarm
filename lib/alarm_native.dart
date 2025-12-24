@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/services.dart';
 
 class AlarmNative {
@@ -11,13 +12,29 @@ class AlarmNative {
     required List<String> paths,
     required int repeatDaysMask,
   }) async {
+    // O lado Android (Kotlin) espera os nomes abaixo.
+    // Mantemos também os nomes antigos (triggerAtMillis/paths) por compatibilidade.
+    final pathsJson = jsonEncode(paths);
     await _ch.invokeMethod('scheduleAlarm', {
       'alarmId': alarmId,
+
+      // Chave esperada no Kotlin
+      'triggerAt': triggerAt.millisecondsSinceEpoch,
+      // Compat: versões antigas do Kotlin (se existirem)
       'triggerAtMillis': triggerAt.millisecondsSinceEpoch,
+
       'label': label,
       'groupId': groupId,
+
+      // Chave esperada no Kotlin
+      'pathsJson': pathsJson,
+      // Compat: versões antigas (se existirem)
       'paths': paths,
+
       'repeatDaysMask': repeatDaysMask,
+      // Necessário para repetição semanal no lado Android
+      'hour': triggerAt.hour,
+      'minute': triggerAt.minute,
     });
   }
 

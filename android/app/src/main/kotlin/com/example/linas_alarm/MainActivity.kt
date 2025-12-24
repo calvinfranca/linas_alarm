@@ -22,12 +22,19 @@ class MainActivity : FlutterActivity() {
                             val alarmId = call.argument<Int>("alarmId")
                                 ?: return@setMethodCallHandler result.error("ARG", "alarmId faltando", null)
 
+                            // Aceita os dois nomes para compatibilidade (Dart antigo enviava triggerAtMillis)
                             val triggerAt = call.argument<Long>("triggerAt")
+                                ?: call.argument<Long>("triggerAtMillis")
                                 ?: return@setMethodCallHandler result.error("ARG", "triggerAt faltando", null)
 
                             val label = call.argument<String>("label") ?: "Alarme"
                             val groupId = call.argument<String>("groupId") ?: ""
-                            val pathsJson = call.argument<String>("pathsJson") ?: "[]"
+                            // Aceita pathsJson (preferido) ou uma lista "paths" (compat)
+                            val pathsJson = call.argument<String>("pathsJson")
+                                ?: run {
+                                    val paths = call.argument<List<String>>("paths")
+                                    if (paths == null) "[]" else org.json.JSONArray(paths).toString()
+                                }
 
                             // NOVO: repetição semanal
                             val repeatDaysMask = call.argument<Int>("repeatDaysMask") ?: 0

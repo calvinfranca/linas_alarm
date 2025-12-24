@@ -46,6 +46,11 @@ class AlarmReceiver : BroadcastReceiver() {
             putExtra("groupId", groupId)
             putExtra("pathsJson", pathsJson)
             putExtra("alarmId", alarmId)
+
+            // Repassa para o service (notificação/soneca precisa disso)
+            putExtra("repeatDaysMask", repeatDaysMask)
+            putExtra("hour", hour)
+            putExtra("minute", minute)
         }
 
         ContextCompat.startForegroundService(context, svc)
