@@ -7,7 +7,9 @@
 .buildlog/
 .history
 
-
+.idea/
+*.iml
+android/.idea/
 
 # Flutter repo-specific
 /bin/cache/
