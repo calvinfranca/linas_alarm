@@ -29,10 +29,12 @@ class CreateAlarmResult {
 
 class CreateAlarmPage extends StatefulWidget {
   final List<MusicGroup> groups;
+  final AlarmItem? initialAlarm;
 
   const CreateAlarmPage({
     super.key,
     required this.groups,
+    this.initialAlarm,
   });
 
   @override
@@ -40,7 +42,8 @@ class CreateAlarmPage extends StatefulWidget {
 }
 
 class _CreateAlarmPageState extends State<CreateAlarmPage> {
-  final _labelController = TextEditingController(text: "");
+  late final TextEditingController _labelController;
+
 
   DateTime _time = DateTime.now();
   MusicGroup? _selectedGroup;
@@ -59,9 +62,47 @@ class _CreateAlarmPageState extends State<CreateAlarmPage> {
   @override
   void initState() {
     super.initState();
-    _selectedGroup = widget.groups.isNotEmpty ? widget.groups.first : null;
+
+    final initial = widget.initialAlarm;
+
+    _labelController = TextEditingController(text: initial?.label ?? "");
+
+    // grupo inicial
+    if (widget.groups.isNotEmpty) {
+      if (initial != null) {
+        _selectedGroup = widget.groups
+            .where((g) => g.id == initial.groupId)
+            .firstOrNull;
+        _selectedGroup ??= widget.groups.first;
+      } else {
+        _selectedGroup = widget.groups.first;
+      }
+    }
+
+    // horário inicial
+    if (initial != null) {
+      _time = DateTime.now().copyWith(
+        hour: initial.hour,
+        minute: initial.minute,
+      );
+    } else {
+      _time = DateTime.now();
+    }
+
+    // dias de repetição inicial (mask -> Set<int>)
+    _repeatWeekdays.clear();
+    if (initial != null && initial.repeatDaysMask != 0) {
+      for (int wd = 1; wd <= 7; wd++) {
+        final bit = 1 << (wd - 1);
+        if ((initial.repeatDaysMask & bit) != 0) {
+          _repeatWeekdays.add(wd);
+        }
+      }
+    }
+
     _loadVolume();
   }
+
 
   Future<void> _loadVolume() async {
     try {
@@ -145,8 +186,17 @@ class _CreateAlarmPageState extends State<CreateAlarmPage> {
       return;
     }
 
-    final alarmId = 100000 + Random().nextInt(900000);
-    final label = _labelController.text.trim().isEmpty ? "Alarme" : _labelController.text.trim();
+    final isEditing = widget.initialAlarm != null;
+
+    final alarmId = isEditing
+        ? widget.initialAlarm!.alarmId
+        : 100000 + Random().nextInt(900000);
+
+    final enabled = isEditing ? widget.initialAlarm!.enabled : true;
+
+    final label = _labelController.text.trim().isEmpty
+        ? "Alarme"
+        : _labelController.text.trim();
     final repeatMask = _repeatMaskFromSelected();
 
     final item = AlarmItem(
@@ -155,10 +205,10 @@ class _CreateAlarmPageState extends State<CreateAlarmPage> {
       hour: _time.hour,
       minute: _time.minute,
       groupId: group.id,
-      enabled: true,
+      enabled: enabled,
       repeatDaysMask: repeatMask,
     );
-
+    
     Navigator.pop(
       context,
       CreateAlarmResult(
@@ -329,10 +379,20 @@ class _CreateAlarmPageState extends State<CreateAlarmPage> {
                       child: const Text("Cancelar", style: TextStyle(color: Color(0xFF3F3DFF), fontSize: 16)),
                     ),
                   ),
+                  
+                  // Texto do botão muda se estiver editando ou criando
                   Expanded(
                     child: TextButton(
                       onPressed: _save,
-                      child: const Text("Salvar", style: TextStyle(color: Color(0xFF3F3DFF), fontSize: 16)),
+                      child: Text(
+                        widget.initialAlarm != null
+                            ? "Salvar alterações"
+                            : "Salvar",
+                        style: const TextStyle(
+                          color: Color(0xFF3F3DFF),
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
                 ],

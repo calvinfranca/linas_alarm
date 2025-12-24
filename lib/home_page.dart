@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:linas_alarm/create_alarm_page.dart';
@@ -163,30 +165,138 @@ class _HomePageState extends State<HomePage> {
   }) {
     final n = now ?? DateTime.now();
 
-    final nextTrigger = AlarmService.computeNextTrigger(
+    final next = AlarmService.computeNextTrigger(
       hour: hour,
       minute: minute,
       repeatDaysMask: repeatDaysMask,
       now: n,
     );
 
-    final diff = nextTrigger.difference(n);
+    final diff = next.difference(n);
 
-    final hours = diff.inHours;
+    if (diff.inSeconds <= 0) {
+      return "O alarme vai tocar em instantes.";
+    }
+
+    final days = diff.inDays;
+    final hours = diff.inHours % 24;
     final minutes = diff.inMinutes % 60;
 
-    if (hours <= 0 && minutes <= 0) {
-      return "O alarme vai tocar em instantes.";
-    } else if (hours <= 0) {
-      return "O alarme vai tocar daqui a $minutes minuto${minutes == 1 ? '' : 's'}.";
-    } else if (minutes == 0) {
-      return "O alarme vai tocar daqui a $hours hora${hours == 1 ? '' : 's'}.";
-    } else {
-      return "O alarme vai tocar daqui a $hours hora${hours == 1 ? '' : 's'} "
-          "e $minutes minuto${minutes == 1 ? '' : 's'}.";
+    final parts = <String>[];
+
+    if (days > 0) {
+      parts.add("$days dia${days == 1 ? '' : 's'}");
+    }
+    if (hours > 0) {
+      parts.add("$hours hora${hours == 1 ? '' : 's'}");
+    }
+    if (minutes > 0 && days == 0) {
+      // minutos só fazem sentido se for hoje/amanhã
+      parts.add("$minutes minuto${minutes == 1 ? '' : 's'}");
+    }
+
+    final timeStr = parts.join(", ");
+
+    return "O alarme vai tocar daqui a $timeStr.";
+  }
+
+  Future<void> _openEditAlarm(AlarmItem alarm) async {
+    final result = await Navigator.push<CreateAlarmResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateAlarmPage(groups: _groups, initialAlarm: alarm),
+      ),
+    );
+
+    if (result == null) return;
+
+    final idx = _alarms.indexWhere((a) => a.alarmId == alarm.alarmId);
+    if (idx == -1) return;
+
+    // mantém alarmId e enabled (o CreateAlarmPage já faz isso, mas garantimos aqui também)
+    final updated = AlarmItem(
+      alarmId: alarm.alarmId,
+      label: result.alarm.label,
+      hour: result.alarm.hour,
+      minute: result.alarm.minute,
+      groupId: result.alarm.groupId,
+      enabled: alarm.enabled,
+      repeatDaysMask: result.alarm.repeatDaysMask,
+    );
+
+    setState(() {
+      _alarms[idx] = updated;
+    });
+    await _saveAll();
+
+    // Reagendar se estiver ativo
+    if (updated.enabled) {
+      await AlarmService.cancel(updated.alarmId);
+
+      final group = _groups.firstWhere((g) => g.id == updated.groupId);
+      await AlarmService.schedule(alarm: updated, paths: group.paths);
+
+      final msg = buildNextAlarmMessage(
+        hour: updated.hour,
+        minute: updated.minute,
+        repeatDaysMask: updated.repeatDaysMask,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
+  Future<void> _createDebugAlarm() async {
+    if (_groups.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Crie um grupo primeiro.")));
+      return;
+    }
+
+    final group = _groups.first; // usa o primeiro grupo
+    if (group.paths.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "O primeiro grupo está vazio. Adicione músicas nele primeiro.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final target = now.add(const Duration(minutes: 1));
+
+    final alarmId = 100000 + Random().nextInt(900000);
+
+    final alarm = AlarmItem(
+      alarmId: alarmId,
+      label: "DEBUG 1 min",
+      hour: target.hour,
+      minute: target.minute,
+      groupId: group.id,
+      enabled: true,
+      repeatDaysMask: 0,
+    );
+
+    setState(() => _alarms.add(alarm));
+    await _saveAll();
+
+    await AlarmService.schedule(alarm: alarm, paths: group.paths);
+
+    final msg = buildNextAlarmMessage(
+      hour: alarm.hour,
+      minute: alarm.minute,
+      repeatDaysMask: alarm.repeatDaysMask,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("DEBUG: $msg")));
+  }
 
   void _testPlay(AlarmItem alarm) {
     final group = _groups.firstWhere((g) => g.id == alarm.groupId);
@@ -298,7 +408,14 @@ class _HomePageState extends State<HomePage> {
       onTap: _hideDeleteIcons, // toca fora para esconder a lixeira
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Lina's Alarm"),          
+          title: const Text("Lina's Alarm"),
+          actions: [
+            IconButton(
+              tooltip: "DEBUG: alarme em 1 minuto",
+              icon: const Icon(Icons.bug_report),
+              onPressed: _createDebugAlarm,
+            ),
+          ],
         ),
         body: ListView(
           padding: const EdgeInsets.all(12),
@@ -443,7 +560,7 @@ class _HomePageState extends State<HomePage> {
               return Card(
                 color: showTrash ? const Color.fromARGB(169, 255, 0, 38) : Color.fromARGB(76, 39, 105, 204),
                 child: InkWell(
-                  onTap: () => _testPlay(a),
+                  onTap: () => _openEditAlarm(a),
                   onLongPress: () {
                     setState(() {
                       _groupIdShowingDelete = null;
@@ -463,7 +580,7 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(8),
                         onTap: showTrash
                             ? () => _deleteAlarm(a)
-                            : () => _testPlay(a),
+                            : () => _openEditAlarm(a),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white24,
@@ -473,7 +590,7 @@ class _HomePageState extends State<HomePage> {
                             8,
                           ), // controla o "tamanho clicável"
                           child: Icon(
-                            showTrash ? Icons.delete_outline : Icons.play_arrow,
+                            showTrash ? Icons.delete_outline : Icons.chevron_right,
                           ),
                         ),
                       ),
