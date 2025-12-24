@@ -282,12 +282,12 @@ class _CreateAlarmPageState extends State<CreateAlarmPage> {
                         // Seleção do grupo de músicas
                         ListTile(
                           title: const Text(
-                            "Som do alarme",
+                            "Grupo de músicas",
                             style: TextStyle(color: Colors.white),
                           ),
                           subtitle: Text(
                             _selectedGroup?.name ?? "Selecione um grupo",
-                            style: const TextStyle(color: Color(0xFF3F3DFF)),
+                            style: const TextStyle(color: Color(0x22FFFFFF)),
                           ),
                           trailing: const Icon(
                             Icons.chevron_right,
@@ -319,36 +319,12 @@ class _CreateAlarmPageState extends State<CreateAlarmPage> {
 
                         // Soneca
                         ListTile(
-                          title: const Text("Adiar", style: TextStyle(color: Colors.white)),
-                          subtitle: Text(
-                            _snooze ? "$_snoozeMinutes minutos, $_snoozeMaxTimes vezes" : "Desativado",
-                            style: TextStyle(color: soft),
-                          ),
+                          title: const Text("Soneca", style: TextStyle(color: Colors.white)),                          
                           trailing: Switch(
                             value: _snooze,
                             onChanged: (v) => setState(() => _snooze = v),
                             activeColor: const Color(0xFF3F3DFF),
                           ),
-                          onTap: !_snooze
-                              ? null
-                              : () async {
-                                  final r = await showModalBottomSheet<_SnoozeCfg>(
-                                    context: context,
-                                    backgroundColor: const Color(0xFF121323),
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-                                    ),
-                                    builder: (c) => _SnoozeSheet(
-                                      minutes: _snoozeMinutes,
-                                      times: _snoozeMaxTimes,
-                                    ),
-                                  );
-                                  if (r == null) return;
-                                  setState(() {
-                                    _snoozeMinutes = r.minutes;
-                                    _snoozeMaxTimes = r.times;
-                                  });
-                                },
                         ),
                         if ((_selectedGroup?.paths.isEmpty ?? false))
                           const Padding(

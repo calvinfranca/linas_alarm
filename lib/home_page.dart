@@ -296,7 +296,6 @@ class _HomePageState extends State<HomePage> {
     await _saveAll();
   }
 
-
   Future<bool> _confirmDelete({
     required String title,
     required String message,
@@ -396,13 +395,13 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Lina's Alarm"),
-          actions: [
-            IconButton(
-              tooltip: "DEBUG: alarme em 1 minuto",
-              icon: const Icon(Icons.bug_report),
-              onPressed: _createDebugAlarm,
-            ),
-          ],
+          // actions: [
+          //   IconButton(
+          //     tooltip: "DEBUG: alarme em 1 minuto",
+          //     icon: const Icon(Icons.bug_report),
+          //     onPressed: _createDebugAlarm,
+          //   ),
+          // ],
         ),
         body: ListView(
           padding: const EdgeInsets.all(12),
