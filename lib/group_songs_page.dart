@@ -1,8 +1,8 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'models.dart';
-import 'player_page.dart';
 
 class GroupSongsPage extends StatefulWidget {
   final MusicGroup group;
@@ -18,6 +18,59 @@ class GroupSongsPage extends StatefulWidget {
 
 class _GroupSongsPageState extends State<GroupSongsPage> {
   late MusicGroup _group = widget.group;
+
+  final AudioPlayer _player = AudioPlayer();
+  String? _playingPath;
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _player.onPlayerStateChanged.listen((s) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = s == PlayerState.playing;
+        if (!_isPlaying) {
+          _playingPath = null;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlay(String path) async {
+    try {
+      if (_playingPath == path && _isPlaying) {
+        await _player.stop();
+        if (!mounted) return;
+        setState(() {
+          _isPlaying = false;
+          _playingPath = null;
+        });
+        return;
+      }
+
+      await _player.stop();
+      await _player.play(DeviceFileSource(path));
+
+      if (!mounted) return;
+      setState(() {
+        _playingPath = path;
+        _isPlaying = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Não foi possível tocar essa música.")),
+      );
+    }
+  }
 
   Future<void> _addSongs() async {
     final result = await FilePicker.platform.pickFiles(
@@ -51,31 +104,16 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
 
     if (ok != true) return;
 
+    if (_playingPath == path && _isPlaying) {
+      await _player.stop();
+      _playingPath = null;
+      _isPlaying = false;
+    }
+
     setState(() {
       final next = _group.paths.where((p) => p != path).toList();
       _group = MusicGroup(id: _group.id, name: _group.name, paths: next);
     });
-  }
-
-  void _playPreview(String path) {
-    // Reaproveita sua PlayerPage: cria um AlarmItem "fake" só para preview.
-    final previewAlarm = AlarmItem(
-      alarmId: -1,
-      label: "Preview",
-      hour: 0,
-      minute: 0,
-      groupId: _group.id,
-      enabled: false,
-      repeatDaysMask: 0,
-    );
-
-    // Para tocar só essa música, montamos um grupo temporário com 1 path.
-    final oneSongGroup = MusicGroup(id: _group.id, name: _group.name, paths: [path]);
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => PlayerPage(alarm: previewAlarm, group: oneSongGroup)),
-    );
   }
 
   String _fileName(String path) {
@@ -96,8 +134,12 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
             onPressed: _addSongs,
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, _group),
-            child: const Text("Salvar", style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
+            onPressed: () async {
+              await _player.stop();
+              if (!mounted) return;
+              Navigator.pop(context, _group);
+            },
+            child: const Text("Salvar", style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -109,13 +151,15 @@ class _GroupSongsPageState extends State<GroupSongsPage> {
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, i) {
                 final path = _group.paths[i];
+                final isThisPlaying = _playingPath == path && _isPlaying;
+
                 return ListTile(
                   title: Text(_fileName(path)),
                   subtitle: Text(path, maxLines: 1, overflow: TextOverflow.ellipsis),
                   leading: IconButton(
-                    tooltip: "Play",
-                    icon: const Icon(Icons.play_arrow),
-                    onPressed: () => _playPreview(path),
+                    tooltip: isThisPlaying ? "Stop" : "Play",
+                    icon: Icon(isThisPlaying ? Icons.stop : Icons.play_arrow),
+                    onPressed: () => _togglePlay(path),
                   ),
                   trailing: IconButton(
                     tooltip: "Excluir",

@@ -9,7 +9,6 @@ import 'package:uuid/uuid.dart';
 import 'alarm_service.dart';
 import 'models.dart';
 import 'storage.dart';
-import 'player_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -70,25 +69,6 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       _groups.add(MusicGroup(id: _uuid.v4(), name: name, paths: []));
-    });
-    await _saveAll();
-  }
-
-  Future<void> _addSongsToGroup(MusicGroup group) async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      type: FileType.custom,
-      allowedExtensions: ["mp3", "m4a", "wav", "ogg", "flac"],
-    );
-    if (result == null) return;
-
-    final paths = result.files.map((f) => f.path).whereType<String>().toList();
-
-    setState(() {
-      final idx = _groups.indexWhere((g) => g.id == group.id);
-      final current = _groups[idx];
-      final merged = {...current.paths, ...paths}.toList();
-      _groups[idx] = MusicGroup(id: current.id, name: current.name, paths: merged);
     });
     await _saveAll();
   }
@@ -297,14 +277,6 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text("DEBUG: $msg")));
-  }
-
-  void _testPlay(AlarmItem alarm) {
-    final group = _groups.firstWhere((g) => g.id == alarm.groupId);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => PlayerPage(alarm: alarm, group: group)),
-    );
   }
 
   Future<void> _openGroupSongsEditor(MusicGroup group) async {
